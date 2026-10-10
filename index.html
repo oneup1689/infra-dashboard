@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Балансы сервисов</title>
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Балансы">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1b1f24;
+    --muted: #6b7280;
+    --line: #e4e7eb;
+    --chip: #eef1f5;
+    --accent: #2563eb;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --error: #dc2626;
+    --unknown: #9ca3af;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216;
+      --card: #171b21;
+      --text: #e8eaed;
+      --muted: #9aa3af;
+      --line: #262c34;
+      --chip: #222832;
+      --accent: #5b8cff;
+      --ok: #34d17a;
+      --warn: #f0b429;
+      --error: #f2585b;
+      --unknown: #7b8595;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  h1 { font-size: 20px; margin: 0; flex: 1 1 auto; }
+  .sub { color: var(--muted); font-size: 13px; margin: 2px 0 20px; }
+  button {
+    font: inherit; cursor: pointer; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); border-radius: 10px;
+    padding: 8px 12px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.icon { padding: 8px 10px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 560px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--unknown);
+  }
+  .card.ok::before { background: var(--ok); }
+  .card.warn::before { background: var(--warn); }
+  .card.error::before { background: var(--error); }
+  .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .label { font-weight: 600; font-size: 16px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; color: #fff; }
+  .badge.ok { background: var(--ok); }
+  .badge.warn { background: var(--warn); }
+  .badge.error { background: var(--error); }
+  .badge.unknown { background: var(--unknown); }
+  .metric { font-size: 28px; font-weight: 700; margin: 10px 0 2px; }
+  .metric .unit { font-size: 15px; font-weight: 500; color: var(--muted); }
+  .second { color: var(--muted); font-size: 14px; }
+  .detail { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--chip); color: var(--muted); font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+  .empty, .stale {
+    background: var(--card); border: 1px dashed var(--line); border-radius: 14px;
+    padding: 24px; text-align: center; color: var(--muted);
+  }
+  .stale { border-style: solid; color: var(--warn); margin-bottom: 12px; padding: 12px; font-size: 13px; }
+  dialog {
+    border: none; border-radius: 16px; padding: 0; max-width: 420px; width: calc(100% - 32px);
+    background: var(--card); color: var(--text); box-shadow: 0 10px 40px rgba(0,0,0,.3);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .dlg { padding: 20px; }
+  .dlg h2 { margin: 0 0 4px; font-size: 18px; }
+  .dlg p { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  label.field { display: block; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
+  label.field input {
+    width: 100%; margin-top: 5px; padding: 10px 12px; font: inherit;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text);
+  }
+  .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .spin { animation: sp 1s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Балансы сервисов</h1>
+    <button class="icon" id="refresh" title="Обновить">⟳</button>
+    <button class="icon" id="settings" title="Настройки">⚙︎</button>
+    <button class="primary" id="checkNow">Проверить сейчас</button>
+  </header>
+  <div class="sub" id="status">Загрузка…</div>
+
+  <div id="staleBox"></div>
+  <div class="grid" id="cards"></div>
+  <div id="emptyBox"></div>
+</div>
+
+<dialog id="cfgDlg">
+  <form method="dialog" class="dlg" id="cfgForm">
+    <h2>Настройки</h2>
+    <p>Эти значения хранятся только в этом браузере (localStorage) и в репозиторий не попадают.</p>
+    <label class="field">Топик DATA в ntfy
+      <input id="f_topic" placeholder="например, infra-data-9f3k2x7q" autocomplete="off">
+    </label>
+    <label class="field">Сервер ntfy
+      <input id="f_base" placeholder="https://ntfy.sh" autocomplete="off">
+    </label>
+    <label class="field">Ссылка на запуск GitHub Actions (для «Проверить сейчас»)
+      <input id="f_run" placeholder="https://github.com/USER/REPO/actions/workflows/monitor.yml" autocomplete="off">
+    </label>
+    <div class="dlg-actions">
+      <button type="button" id="cfgCancel">Отмена</button>
+      <button type="submit" class="primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const DATA_TITLE = "infra-monitor-data";
+const LS_KEY = "infra_monitor_cfg";
+const REFRESH_MS = 15000;
+
+const $ = (id) => document.getElementById(id);
+let timer = null, fastUntil = 0;
+
+function cfg() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
+}
+function saveCfg(c) { try { localStorage.setItem(LS_KEY, JSON.stringify(c)); } catch {} }
+
+function fmtAmount(s) {
+  const unit = s.currency === "RUB" ? "₽" : (s.currency || "");
+  if (s.balance === null || s.balance === undefined) return "— " + unit;
+  const n = Number(s.balance);
+  const str = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+  return str + " " + unit;
+}
+function badgeText(st) {
+  return { ok: "В норме", warn: "Низкий", error: "Ошибка", unknown: "Нет данных" }[st] || st;
+}
+function ago(iso) {
+  const t = Date.parse(iso);
+  if (isNaN(t)) return "";
+  const min = Math.round((Date.now() - t) / 60000);
+  if (min < 1) return "только что";
+  if (min < 60) return min + " мин назад";
+  const h = Math.round(min / 60);
+  if (h < 24) return h + " ч назад";
+  return Math.round(h / 24) + " дн назад";
+}
+
+function cardHTML(s) {
+  const st = s.status || "unknown";
+  let metric, second;
+  if (s.alert_on === "days" && s.days_left !== null && s.days_left !== undefined) {
+    metric = `${s.days_left} <span class="unit">дн.</span>`;
+    second = "баланс " + fmtAmount(s);
+  } else {
+    metric = fmtAmount(s).replace(/ (\S+)$/, ' <span class="unit">$1</span>');
+    second = "";
+  }
+  const chips = (s.projects || []).map(p => `<span class="chip">${esc(p)}</span>`).join("");
+  const detail = st === "error" ? esc(s.error || "ошибка") : esc(s.detail || "");
+  return `<div class="card ${st}">
+    <div class="card-top">
+      <span class="label">${esc(s.label || s.id)}</span>
+      <span class="badge ${st}">${badgeText(st)}</span>
+    </div>
+    <div class="metric">${st === "error" ? "—" : metric}</div>
+    ${second ? `<div class="second">${second}</div>` : ""}
+    <div class="detail">${detail}</div>
+    <div class="chips">${chips}</div>
+  </div>`;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+async function load() {
+  const c = cfg();
+  if (!c.topic) { showEmpty(); return; }
+  const base = (c.base || "https://ntfy.sh").replace(/\/+$/, "");
+  $("status").textContent = "Обновляю…";
+  try {
+    const r = await fetch(`${base}/${encodeURIComponent(c.topic)}/json?poll=1`, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const text = await r.text();
+    let last = null;
+    for (const line of text.split("\n")) {
+      if (!line.trim()) continue;
+      let m; try { m = JSON.parse(line); } catch { continue; }
+      if (m.event === "message" && m.title === DATA_TITLE) last = m;
+    }
+    if (!last) { render(null, "Пока нет данных — дождись первого прогона монитора."); return; }
+    render(JSON.parse(last.message));
+  } catch (e) {
+    $("status").textContent = "Не удалось получить данные: " + e.message;
+  }
+}
+
+function render(payload, note) {
+  $("emptyBox").innerHTML = "";
+  if (!payload) {
+    $("cards").innerHTML = "";
+    $("staleBox").innerHTML = "";
+    $("status").textContent = note || "";
+    return;
+  }
+  const services = payload.services || [];
+  $("cards").innerHTML = services.map(cardHTML).join("");
+  const updated = ago(payload.generated_at);
+  $("status").textContent = "Обновлено: " + updated;
+  // предупреждение об устаревших данных (прогон раз в 6 ч; >13 ч — что-то не так)
+  const t = Date.parse(payload.generated_at);
+  const staleBox = $("staleBox");
+  if (!isNaN(t) && Date.now() - t > 13 * 3600 * 1000) {
+    staleBox.innerHTML = `<div class="stale">⚠️ Данные старше 13 часов (${updated}). Возможно, монитор не запускался — проверь GitHub Actions.</div>`;
+  } else {
+    staleBox.innerHTML = "";
+  }
+}
+
+function showEmpty() {
+  $("cards").innerHTML = "";
+  $("staleBox").innerHTML = "";
+  $("status").textContent = "";
+  $("emptyBox").innerHTML = `<div class="empty">Не задан топик DATA.<br><br>
+    <button class="primary" onclick="document.getElementById('cfgDlg').showModal()">Открыть настройки</button></div>`;
+}
+
+// --- кнопки ---
+$("refresh").onclick = () => load();
+
+$("checkNow").onclick = () => {
+  const c = cfg();
+  if (c.run) window.open(c.run, "_blank", "noopener");
+  else { alert("Укажи ссылку на запуск GitHub Actions в настройках (⚙︎)."); return; }
+  // следующие ~2 минуты обновляемся чаще, чтобы поймать свежий прогон
+  fastUntil = Date.now() + 120000;
+  schedule();
+};
+
+$("settings").onclick = openCfg;
+$("cfgCancel").onclick = () => $("cfgDlg").close();
+function openCfg() {
+  const c = cfg();
+  $("f_topic").value = c.topic || "";
+  $("f_base").value = c.base || "";
+  $("f_run").value = c.run || "";
+  $("cfgDlg").showModal();
+}
+$("cfgForm").addEventListener("submit", () => {
+  saveCfg({
+    topic: $("f_topic").value.trim(),
+    base: $("f_base").value.trim(),
+    run: $("f_run").value.trim(),
+  });
+  load();
+});
+
+function schedule() {
+  clearTimeout(timer);
+  const delay = Date.now() < fastUntil ? 10000 : REFRESH_MS;
+  timer = setTimeout(() => { load().finally(schedule); }, delay);
+}
+
+// старт
+if (!cfg().topic) { showEmpty(); openCfg(); } else { load(); }
+schedule();
+</script>
+</body>
+</html>
